@@ -1,0 +1,98 @@
+# ============================================================
+# 中国42部门CGE模型配置文件 v2.0
+# ============================================================
+
+model:
+  name: "中国CGE - 42部门政策模拟平台 v2.0"
+  base_year: 2025
+  num_sectors: 42
+  num_factors: 2  # LAB, CAP
+  currency: "亿元（2025年价格）"
+
+# --- 生产结构 ---
+production:
+  type: "nested_ces"
+  nest_structure:
+    - level: 1
+      inputs: ["intermediate_bundle", "value_added_bundle"]
+      elasticity: 0.0  # Leontief
+    - level: 2
+      name: "value_added"
+      inputs: ["LAB", "CAP"]
+      elasticity: 0.8  # CES
+
+# --- 住户 ---
+households:
+  type: "representative"
+  demand_system: "LES"
+  frisch_parameter: -1.5
+  income_tax_rate: 0.10
+
+# --- 政府 ---
+government:
+  instruments:
+    - type: "consumption_tax"
+      rate: 0.13
+      base: "household_consumption"
+    - type: "corporate_income_tax"
+      rate: 0.25
+      base: "capital_income"
+    - type: "production_tax"
+      rate: "calibrated"
+      base: "output"
+    # v2.0 新增政策工具
+    - type: "interest_rate"
+      rate: 3.0  # 1年期LPR (%)
+      base: "monetary"
+    - type: "tfp"
+      base: "productivity"
+    - type: "targeted_investment"
+      base: "sector_specific"
+  expenditure: "fixed_shares"
+  fiscal_revenue: 216000  # 2025年一般公共预算收入(亿元)
+  fiscal_expenditure: 287300
+  fiscal_deficit: 71300
+
+# --- 贸易 ---
+trade:
+  type: "small_open_economy"
+  armington_elasticities: "sector_specific"
+  cet_elasticities: "sector_specific"
+  import_tariff: 0.05
+
+# --- 预期 ---
+expectations:
+  type: "perfect_foresight"
+  horizon: 12  # 季度，前瞻12个季度(3年)
+  depreciation_rate: 0.05   # 年化
+  discount_factor: 0.985    # 季度折现
+
+# --- 宏观闭合 ---
+macro_closure:
+  type: "keynesian"  # neoclassical | keynesian
+
+# --- v2.0: 信心指数参数 ---
+confidence:
+  baseline: 50.0  # 中性基准
+  persistence: 0.85  # AR(1)持续性参数(季度)
+  consumer_weights:
+    gdp: 3.0
+    cpi: -2.0
+    employment: 1.5
+    fiscal: 0.5
+  enterprise_weights:
+    gdp: 2.5
+    interest_rate: -3.0
+    investment: 2.0
+    fiscal: 0.8
+  investor_weights:
+    gdp: 2.0
+    interest_rate: -2.5
+    exchange_rate: 1.0
+    fiscal: 1.0
+
+# --- 求解器 ---
+solver:
+  name: "johansen"  # v2.0: 纯numpy Johansen
+  options:
+    tol: 1.0e-8
